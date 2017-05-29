@@ -6,10 +6,32 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
 )
 
-var decoder = schema.NewDecoder()
+const (
+	statusSuccess = "success"
+	statusError   = "error"
+)
+
+type jsonResponse struct {
+	Status string      `json:"status"`
+	Data   interface{} `json:"data"`
+}
+
+type jsonResponseError struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+func jsendResponse(w *http.ResponseWriter, payload interface{}, errorMessage *string) {
+	if errorMessage == nil {
+		resp := jsonResponse{statusSuccess, payload}
+		json.NewEncoder(*w).Encode(&resp)
+	} else {
+		resp := jsonResponseError{statusError, *errorMessage}
+		json.NewEncoder(*w).Encode(&resp)
+	}
+}
 
 // Render the main interface
 func Index(w http.ResponseWriter, r *http.Request) {
@@ -20,16 +42,24 @@ func Index(w http.ResponseWriter, r *http.Request) {
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var user = new(User)
 	if err := json.NewDecoder(r.Body).Decode(user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errmsg := err.Error()
+		http.Error(w, errmsg, http.StatusBadRequest)
+		jsendResponse(&w, nil, &errmsg)
 		return
 	}
 	if user.Username == "" || user.Password == "" {
-		http.Error(w, "missing username or password", http.StatusBadRequest)
+		errmsg := "missing username or password"
+		http.Error(w, errmsg, http.StatusBadRequest)
+		jsendResponse(&w, nil, &errmsg)
 		return
 	}
 	if err := user.Create(); err != nil {
-		http.Error(w, err.Error(), http.StatusConflict)
+		errmsg := err.Error()
+		http.Error(w, errmsg, http.StatusConflict)
+		jsendResponse(&w, nil, &errmsg)
+		return
 	}
+	jsendResponse(&w, user, nil)
 }
 
 // Get a user record from an id
@@ -38,24 +68,34 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	var user = new(User)
 	err := user.Get(&id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errmsg := err.Error()
+		http.Error(w, errmsg, http.StatusBadRequest)
+		jsendResponse(&w, nil, &errmsg)
+		return
 	}
-	json.NewEncoder(w).Encode(user)
+	jsendResponse(&w, user, nil)
 }
 
 // Authenticate with a username and password
 func Auth(w http.ResponseWriter, r *http.Request) {
 	var user = new(User)
 	if err := json.NewDecoder(r.Body).Decode(user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errmsg := err.Error()
+		http.Error(w, errmsg, http.StatusBadRequest)
+		jsendResponse(&w, nil, &errmsg)
 		return
 	}
 	if result, err := user.Auth(); !result {
+		errmsg := "failed auth"
 		if err != nil {
-			errStr := fmt.Sprintf("failed auth %v", err.Error())
+			errStr := fmt.Sprintf("%s %s", errmsg, err.Error())
 			http.Error(w, errStr, http.StatusUnauthorized)
+			jsendResponse(&w, nil, &errStr)
+			return
 		}
-		http.Error(w, "failed auth", http.StatusUnauthorized)
+		http.Error(w, errmsg, http.StatusUnauthorized)
+		jsendResponse(&w, nil, &errmsg)
 		return
 	}
+	jsendResponse(&w, user, nil)
 }
