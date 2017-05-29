@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -33,9 +34,21 @@ func jsendResponse(w *http.ResponseWriter, payload interface{}, errorMessage *st
 	}
 }
 
+var AppRouter *mux.Router //needs to be set
+
 // Render the main interface
 func Index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome!")
+	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+	// Get application paths to pass to interface
+	data := struct {
+		LoginPath    *string
+		RegisterPath *string
+	}{
+		GetPath("Auth"),
+		GetPath("CreateUser"),
+	}
+	t, _ := template.ParseFiles("static/index.html")
+	t.Execute(w, &data)
 }
 
 // Save a user record

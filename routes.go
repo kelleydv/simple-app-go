@@ -7,10 +7,10 @@ import (
 )
 
 type Route struct {
-	Name        string
-	Method      string
-	Pattern     string
-	HandlerFunc http.HandlerFunc
+	Name        string           `json:"name"`
+	Method      string           `json:"method"`
+	Path        string           `json:"path"`
+	HandlerFunc http.HandlerFunc `json:"-"`
 }
 
 type Routes []Route
@@ -20,17 +20,25 @@ func NewRouter() *mux.Router {
 	for _, route := range routes {
 		var handler http.Handler
 		handler = route.HandlerFunc
+		// Apply middleware
 		handler = Header(handler)
 		handler = Logger(handler, route.Name)
-
+		// Register route
 		router.
 			Methods(route.Method).
-			Path(route.Pattern).
+			Path(route.Path).
 			Name(route.Name).
 			Handler(handler)
-
 	}
 	return router
+}
+
+func GetPath(name string) *string {
+	if path, err := AppRouter.Get(name).GetPathTemplate(); err == nil {
+		return &path
+	} else {
+		panic(err)
+	}
 }
 
 var routes = Routes{
