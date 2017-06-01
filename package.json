@@ -1,0 +1,12 @@
+{
+  "name": "simple-app-go",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/kelleydv/simple-app-go.git",
+  "author": "kelleydv <kelleydv@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "jquery": "^3.2.1"
+  }
+}
